@@ -42,7 +42,7 @@ async function createYocoWebhook() {
 
 // Your API route
 app.post('/api/checkouts', async (req, res) => {
-  const amount = 350;
+  const amount = req.body.cost;
   const currency = 'ZAR'
 
   try {
