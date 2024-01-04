@@ -20,6 +20,7 @@ const GRAPH_ENDPOINT = process.env.GRAPH_CMS_ENDPOINT;
 let orderStatus = 'pending';
 let votes = null;
 let contestantId = null;
+let run = 0;
 
 async function createYocoWebhook() {
     try {
@@ -69,6 +70,7 @@ app.post('/api/checkouts', async (req, res) => {
     );
     const yocoData = yocoResponse.data;
     res.json({ success: true, redirectUrl: yocoData.redirectUrl });
+    run = 0;
 
   } catch (error) {
     console.error('Error making request to Yoco API:', error.message);
@@ -78,7 +80,9 @@ app.post('/api/checkouts', async (req, res) => {
 
 app.post('/webhook', async (req, res) => {
     const webhookEvent = req.body;
-    if (webhookEvent.type === 'payment.succeeded') {
+    if (webhookEvent.type === 'payment.succeeded' && run === 0) {
+      run = run + 1;
+
       try {
         if (votes !== null && contestantId !== null) {
           const graphqlClient = new GraphQLClient(GRAPH_ENDPOINT);
