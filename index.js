@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const dotenv = require('dotenv').config();
+const { gql, GraphQLClient } = require('graphql-request');
+
 
 const app = express();
 
@@ -12,9 +14,12 @@ app.use(express.json());
 // Your Yoco API key
 const yocoApiKey = process.env.YOCO_API_KEY; 
 const yocoWebhookURL = process.env.YOCO_WEBHOOK_URL;
+const GRAPH_ENDPOINT = process.env.GRAPH_CMS_ENDPOINT;
 
 //order updating
 let orderStatus = 'pending';
+let votes = null;
+let contestantId = null;
 
 async function createYocoWebhook() {
     try {
@@ -45,6 +50,9 @@ app.post('/api/checkouts', async (req, res) => {
   const amount = req.body.cost;
   const currency = 'ZAR'
 
+  votes = req.body.votes;
+  contestantId = req.body.contestantId;
+
   try {
     const yocoResponse = await axios.post(
       'https://payments.yoco.com/api/checkouts',
@@ -68,12 +76,62 @@ app.post('/api/checkouts', async (req, res) => {
   }
 });
 
-app.post('/webhook', (req, res) => {
+app.post('/webhook', async (req, res) => {
     const webhookEvent = req.body;
     if (webhookEvent.type === 'payment.succeeded') {
-      orderStatus = 'success';
-        
-      res.status(200).json({ orderStatus });
+      try {
+        if (votes !== null && contestantId !== null) {
+          const graphqlClient = new GraphQLClient(GRAPH_ENDPOINT);
+
+          const fetchquery = gql`
+            query FetchContestantsCurrentVotes($id: ID!) {
+              contestant(where: { id: $id }) {
+                votes
+              }
+            }
+          `;
+
+          const variables = {
+            id: contestantId
+          }
+
+          const fetch_await = await graphqlClient.request(fetchquery, variables);
+          const fetch_res = await fetch_await;
+          console.log(fetch_res);
+
+          if (fetch_res.contestant.votes) {
+            try {
+              const query = gql`
+                mutation UpdateContestantsVotes($id: ID!, $votes: Int!) {
+                  updateContestant(data: {votes: $votes}, where: {id: $id}) {
+                    votes
+                  }
+                }
+                `;
+              const newVotes = Number(fetch_res.contestant.votes) + Number(votes);
+
+              console.log(newVotes)
+              const variables_update = {
+                id: contestantId,
+                votes: newVotes
+              }
+
+              const await_fetch = await graphqlClient.request(query, variables_update);
+              const response = await await_fetch;
+              console.log("Updated: ", response);
+            } catch (error) {
+              console.log("Error with second function: ", error);
+            }
+            
+          }
+          
+        } else {
+          console.log("votes and id: ", votes, contestantId);
+        }
+      } catch (error) {
+        console.log("Something went wrong: ", error)
+      }
+      console.log("Complete: Ran!")
     } else {
       orderStatus = 'error';
       res.status(200).json({ orderStatus });
