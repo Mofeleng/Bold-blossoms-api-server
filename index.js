@@ -122,6 +122,25 @@ app.post('/webhook', async (req, res) => {
 
               const await_fetch = await graphqlClient.request(query, variables_update);
               const response = await await_fetch;
+
+
+              const mutation = gql`
+              mutation UpdateVotes($id: ID!) {
+                  publishContestant(where: {id: $id }) {
+                    votes
+                  }
+                }
+              `;
+
+              const idvariable = {
+                id: contestantId
+              }
+
+              const response_votes_updated = await graphqlClient.request(mutation, idvariable)
+              const result_votes_updated = await response_votes_updated
+
+              console.log("Votes were updated: ", response_votes_updated)
+              
               console.log("Updated: ", response);
             } catch (error) {
               console.log("Error with second function: ", error);
