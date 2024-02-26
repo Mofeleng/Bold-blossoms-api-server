@@ -5,8 +5,7 @@ const dotenv = require('dotenv').config();
 const { gql, GraphQLClient } = require('graphql-request');
 
 //controller functions
-const voteCheckout = require('./controllers/voteCheckout');
-const webhooks = require('./controllers/webhook');
+const {voteCheckout, webhook:webhooks} = require('./controllers/controllers');
 
 
 const app = express();
@@ -40,9 +39,9 @@ async function createYocoWebhook() {
         }
       );
   
-      //console.log('Yoco Webhook created successfully:', response.data);
+      console.log('Yoco Webhook created successfully:', response.data);
     } catch (error) {
-      //console.error('Error creating Yoco Webhook:', error.response ? error.response.data : error.message);
+      console.error('Error creating Yoco Webhook:', error.response ? error.response.data : error.message);
     }
   }
 
@@ -55,5 +54,5 @@ app.post('/webhook', webhooks);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  //console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
